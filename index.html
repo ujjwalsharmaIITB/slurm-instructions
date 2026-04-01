@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SLURM Instructions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg:       #0a0c0f;
+    --bg2:      #0f1216;
+    --bg3:      #141820;
+    --border:   #1e2530;
+    --border2:  #2a3444;
+    --green:    #00e5a0;
+    --green-dim:#00b87f;
+    --cyan:     #38d9f5;
+    --yellow:   #f5c842;
+    --red:      #ff5f5f;
+    --muted:    #4a5a70;
+    --text:     #c8d6e8;
+    --text2:    #7a8fa8;
+    --sidebar-w: 280px;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.7;
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ── SIDEBAR ─────────────────────────────────────── */
+  aside {
+    width: var(--sidebar-w);
+    min-width: var(--sidebar-w);
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 2rem;
+    z-index: 100;
+  }
+
+  aside::-webkit-scrollbar { width: 4px; }
+  aside::-webkit-scrollbar-track { background: transparent; }
+  aside::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  .sidebar-header {
+    padding: 1.8rem 1.4rem 1.4rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 0.6rem;
+  }
+
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    background: var(--green);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .logo-icon svg { width: 18px; height: 18px; }
+
+  .sidebar-title {
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: 1rem;
+    color: #fff;
+    letter-spacing: 0.02em;
+  }
+
+  .sidebar-subtitle {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  nav { padding: 1rem 0; }
+
+  .nav-section-label {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    padding: 0.8rem 1.4rem 0.3rem;
+  }
+
+  nav a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.45rem 1.4rem;
+    color: var(--text2);
+    text-decoration: none;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    transition: color 0.15s, background 0.15s;
+    border-left: 2px solid transparent;
+    position: relative;
+  }
+
+  nav a:hover {
+    color: var(--green);
+    background: rgba(0, 229, 160, 0.04);
+    border-left-color: var(--green-dim);
+  }
+
+  nav a.active {
+    color: var(--green);
+    background: rgba(0, 229, 160, 0.06);
+    border-left-color: var(--green);
+  }
+
+  nav a .nav-num {
+    color: var(--muted);
+    font-size: 0.62rem;
+    min-width: 16px;
+  }
+
+  /* ── MAIN ─────────────────────────────────────────── */
+  main {
+    flex: 1;
+    max-width: calc(100vw - var(--sidebar-w));
+    overflow-x: hidden;
+  }
+
+  .top-bar {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 2.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
+  .top-bar-tag {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    background: rgba(0,229,160,0.1);
+    color: var(--green);
+    border: 1px solid rgba(0,229,160,0.25);
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .top-bar-path {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+
+  .top-bar-path span { color: var(--text2); }
+
+  /* Hero */
+  .hero {
+    padding: 4rem 2.5rem 3rem;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(135deg, var(--bg) 0%, var(--bg3) 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -80px; right: -80px;
+    width: 360px; height: 360px;
+    background: radial-gradient(circle, rgba(0,229,160,0.07) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--green);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .hero-eyebrow::before {
+    content: '';
+    display: inline-block;
+    width: 24px;
+    height: 1px;
+    background: var(--green);
+  }
+
+  h1 {
+    font-family: var(--sans);
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin-bottom: 1rem;
+  }
+
+  h1 span { color: var(--green); }
+
+  .hero-desc {
+    font-size: 0.95rem;
+    color: var(--text2);
+    max-width: 560px;
+    line-height: 1.8;
+  }
+
+  .hero-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1.8rem;
+  }
+
+  .chip {
+    font-family: var(--mono);
+    font-size: 0.66rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 4px;
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    letter-spacing: 0.04em;
+  }
+
+  .chip.green { border-color: rgba(0,229,160,0.3); color: var(--green); }
+  .chip.cyan  { border-color: rgba(56,217,245,0.3); color: var(--cyan); }
+  .chip.yellow{ border-color: rgba(245,200,66,0.3); color: var(--yellow); }
+
+  /* Content area */
+  .content {
+    padding: 0 2.5rem 4rem;
+  }
+
+  /* Sections */
+  .section {
+    margin-top: 3.5rem;
+    animation: fadeIn 0.4s ease both;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.8rem;
+    margin-bottom: 1.2rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-num {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--green);
+    letter-spacing: 0.08em;
+    background: rgba(0,229,160,0.08);
+    padding: 0.15rem 0.5rem;
+    border-radius: 3px;
+  }
+
+  h2 {
+    font-family: var(--sans);
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.01em;
+  }
+
+  h3 {
+    font-family: var(--sans);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--cyan);
+    margin: 1.5rem 0 0.6rem;
+  }
+
+  h4 {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 1.2rem 0 0.5rem;
+  }
+
+  p { margin-bottom: 0.8rem; color: var(--text); }
+
+  /* Code blocks */
+  .code-block {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin: 0.8rem 0 1.2rem;
+    overflow: hidden;
+  }
+
+  .code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1rem;
+    background: rgba(255,255,255,0.03);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .code-lang {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .code-copy {
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    color: var(--muted);
+    background: none;
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    padding: 0.15rem 0.5rem;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  .code-copy:hover { color: var(--green); border-color: var(--green-dim); }
+  .code-copy.copied { color: var(--green); border-color: var(--green); }
+
+  pre {
+    padding: 1rem 1.2rem;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    line-height: 1.7;
+    color: var(--text);
+  }
+
+  pre::-webkit-scrollbar { height: 4px; }
+  pre::-webkit-scrollbar-track { background: transparent; }
+  pre::-webkit-scrollbar-thumb { background: var(--border2); }
+
+  .tok-comment { color: var(--muted); }
+  .tok-flag    { color: var(--cyan); }
+  .tok-value   { color: var(--yellow); }
+  .tok-cmd     { color: var(--green); font-weight: 500; }
+  .tok-sbatch  { color: #b48ead; }
+  .tok-export  { color: #d08770; }
+  .tok-var     { color: var(--cyan); }
+  .tok-env     { color: var(--yellow); font-style: italic; }
+
+  /* Inline code */
+  code {
+    font-family: var(--mono);
+    font-size: 0.8em;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    padding: 0.1em 0.4em;
+    color: var(--cyan);
+  }
+
+  /* Callouts */
+  .callout {
+    border-radius: 8px;
+    padding: 0.9rem 1.1rem;
+    margin: 1rem 0;
+    display: flex;
+    gap: 0.7rem;
+    font-size: 0.88rem;
+  }
+
+  .callout-icon { font-size: 1rem; flex-shrink: 0; }
+  .callout.warn {
+    background: rgba(245,200,66,0.07);
+    border: 1px solid rgba(245,200,66,0.2);
+    color: #d4b84a;
+  }
+  .callout.info {
+    background: rgba(56,217,245,0.07);
+    border: 1px solid rgba(56,217,245,0.2);
+    color: #5ecfdf;
+  }
+  .callout.danger {
+    background: rgba(255,95,95,0.07);
+    border: 1px solid rgba(255,95,95,0.2);
+    color: #d46b6b;
+  }
+  .callout.success {
+    background: rgba(0,229,160,0.07);
+    border: 1px solid rgba(0,229,160,0.2);
+    color: var(--green-dim);
+  }
+  .callout strong { font-weight: 700; }
+  .callout code { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.1); }
+
+  /* Tables */
+  .table-wrap {
+    overflow-x: auto;
+    margin: 1rem 0 1.4rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 0.76rem;
+  }
+
+  thead { background: var(--bg3); }
+
+  th {
+    text-align: left;
+    padding: 0.65rem 1rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+    border-bottom: 1px solid var(--border);
+  }
+
+  td {
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+
+  td:first-child { color: var(--yellow); }
+
+  /* Check list */
+  .checklist { list-style: none; padding: 0; }
+  .checklist li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 0.35rem 0;
+    font-size: 0.88rem;
+    color: var(--text2);
+  }
+  .checklist li::before {
+    content: '☐';
+    color: var(--muted);
+    font-size: 0.9rem;
+    flex-shrink: 0;
+    margin-top: 0.05em;
+  }
+
+  /* Bullet list */
+  ul.bullets { padding-left: 1.2rem; }
+  ul.bullets li {
+    margin: 0.3rem 0;
+    color: var(--text);
+    font-size: 0.88rem;
+    list-style: none;
+    padding-left: 1rem;
+    position: relative;
+  }
+  ul.bullets li::before {
+    content: '▸';
+    position: absolute;
+    left: 0;
+    color: var(--green);
+    font-size: 0.7rem;
+    top: 0.2em;
+  }
+
+  /* Grid layout for resource items */
+  .resource-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.8rem;
+    margin: 1rem 0;
+  }
+
+  .resource-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+
+  .resource-card-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.3rem;
+  }
+
+  .resource-card-value {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    color: var(--green);
+  }
+
+  /* Compare table for srun vs torchrun */
+  .compare-table td:nth-child(2) { color: var(--text2); }
+  .compare-table td:nth-child(3) { color: var(--green); }
+
+  .icon-yes  { color: var(--green); }
+  .icon-no   { color: var(--red); }
+  .icon-warn { color: var(--yellow); }
+
+  /* Session setup steps */
+  .steps { counter-reset: step; }
+  .step {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .step-num {
+    width: 28px;
+    height: 28px;
+    background: rgba(0,229,160,0.1);
+    border: 1px solid rgba(0,229,160,0.3);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--green);
+    flex-shrink: 0;
+    margin-top: 0.15rem;
+  }
+  .step-body { flex: 1; }
+  .step-body strong { color: #fff; display: block; margin-bottom: 0.3rem; }
+
+  /* Mental model box */
+  .mental-model {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.2rem 1.4rem;
+    margin: 1rem 0;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--text2);
+    line-height: 1.9;
+  }
+  .mental-model .label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+
+  /* Divider */
+  hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2rem 0;
+  }
+
+  /* ── SCROLLBAR ────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  /* ── RESPONSIVE ───────────────────────────────────── */
+  @media (max-width: 768px) {
+    body { flex-direction: column; }
+    aside {
+      width: 100%; min-width: unset;
+      height: auto; position: relative;
+    }
+    main { max-width: 100%; }
+    .content { padding: 0 1.2rem 3rem; }
+    .hero { padding: 2rem 1.2rem 2rem; }
+    .top-bar { padding: 0.8rem 1.2rem; }
+    h1 { font-size: 1.7rem; }
+    nav a { font-size: 0.78rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── SIDEBAR ───────────────────────────────────────── -->
+<aside>
+  <div class="sidebar-header">
+    <div class="sidebar-logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#0a0c0f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2"/>
+          <path d="M8 21h8M12 17v4"/>
+          <path d="M6 8l3 3-3 3"/>
+          <path d="M12 14h4"/>
+        </svg>
+      </div>
+      <div>
+        <div class="sidebar-title">SLURM Docs</div>
+      </div>
+    </div>
+    <div class="sidebar-subtitle">HPC Cluster Reference</div>
+  </div>
+
+  <nav id="sidebar-nav">
+    <div class="nav-section-label">Cluster Basics</div>
+    <a href="#s1"><span class="nav-num">01</span> GPU Partition</a>
+    <a href="#s2"><span class="nav-num">02</span> How to Get Partitions</a>
+    <a href="#s3"><span class="nav-num">03</span> Cluster Information</a>
+
+    <div class="nav-section-label">Job Management</div>
+    <a href="#s4"><span class="nav-num">04</span> Job Submission</a>
+    <a href="#s5"><span class="nav-num">05</span> Resources</a>
+    <a href="#s6"><span class="nav-num">06</span> Job Monitoring</a>
+    <a href="#s7"><span class="nav-num">07</span> View &amp; Modify Jobs</a>
+    <a href="#s8"><span class="nav-num">08</span> GPU Usage</a>
+    <a href="#s9"><span class="nav-num">09</span> Worker Shell</a>
+    <a href="#s10"><span class="nav-num">10</span> Cancel / Modify</a>
+    <a href="#s11"><span class="nav-num">11</span> Debugging &amp; Logs</a>
+
+    <div class="nav-section-label">Advanced</div>
+    <a href="#s12"><span class="nav-num">12</span> Tips &amp; Pitfalls</a>
+    <a href="#s13"><span class="nav-num">13</span> Training</a>
+    <a href="#s14"><span class="nav-num">14</span> Prajna Server</a>
+    <a href="#s15"><span class="nav-num">15</span> Spack &amp; Conda</a>
+  </nav>
+</aside>
+
+<!-- ── MAIN ─────────────────────────────────────────── -->
+<main>
+  <div class="top-bar">
+    <div class="top-bar-tag">v1.0</div>
+    <div class="top-bar-path">docs / <span>slurm-instructions</span></div>
+  </div>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-eyebrow">HPC Reference Guide</div>
+    <h1>SLURM<br /><span>Instructions</span></h1>
+    <p class="hero-desc">
+      A complete reference for submitting, monitoring, and managing jobs on a SLURM-managed HPC cluster — including GPU allocation, distributed training, and Prajna-specific configuration.
+    </p>
+    <div class="hero-chips">
+      <span class="chip green">NVIDIA A100</span>
+      <span class="chip cyan">OpenNMT / PyTorch</span>
+      <span class="chip yellow">Prajna Cluster</span>
+      <span class="chip">CUDA 12.4</span>
+      <span class="chip">Multi-Node DDP</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ── 1 ── -->
+    <div class="section" id="s1">
+      <div class="section-header">
+        <span class="section-num">01</span>
+        <h2>GPU Partition</h2>
+      </div>
+      <p>The GPU partition includes nodes equipped with <strong>NVIDIA A100 GPUs</strong>. Jobs submitted here can leverage A100 GPU cards for high-performance parallel processing.</p>
+      <div class="callout info">
+        <span class="callout-icon">ℹ</span>
+        <div>The GPU partition <strong>exclusively contains GPU nodes</strong>. To submit jobs to GPU nodes, you must specify both the <strong>partition name</strong> and the <strong>number of GPU cards</strong> required.</div>
+      </div>
+    </div>
+
+    <!-- ── 2 ── -->
+    <div class="section" id="s2">
+      <div class="section-header">
+        <span class="section-num">02</span>
+        <h2>How to Get Partitions</h2>
+      </div>
+      <p>List all available partitions:</p>
+      <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="code-copy" onclick="copyCode(this)">copy</button></div><pre><span class="tok-cmd">sinfo</span></pre></div>
+
+      <p>Show only partition names:</p>
+      <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="code-copy" onclick="copyCode(this)">copy</button></div><pre><span class="tok-cmd">sinfo</span> <span class="tok-flag">-h -o</span> <span class="tok-value">"%P"</span></pre></div>
+
+      <p>Detailed view — state, nodes, time limits:</p>
+      <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="code-copy" onclick="copyCode(this)">copy</button></div><pre><span class="tok-cmd">sinfo</span> <span class="tok-flag">-o</span> <span class="tok-value">"%P %a %l %D %t %N"</span></pre></div>
+
+      <p>Show specific partition info:</p>
+      <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="code-copy" onclick="copyCode(this)">copy</button></div><pre><span class="tok-cmd">scontrol</span> show partition <span class="tok-value">&lt;partition_name&gt;</span></pre></div>
+    </div>
+
+    <!-- ── 3 ── -->
+    <div class="section" id="s3">
+      <div class="section-header">
+        <span class="section-num">03</span>
+        <h2>Partition &amp; Cluster Information</h2>
+      </div>
+      <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="code-copy" onclick="copyCode(this)">copy</button></div><pre><span class="tok-comment"># View all partitions and status</span>
+<span class="tok-cmd">sinfo</span>
+
+<span class="tok-comment"># Detailed partition info (nodes, GPUs, time limits)</span>
+<span class="tok-cmd">sinfo</span> <span class="tok-flag">-o</span> <span class="tok-value">"%P %N %G %l %c %m"</span>
+
+<span class="tok-comment"># Specific partition details</span>
+<span class="tok-cmd">scontrol</span> show partition <span class="tok-value">&lt;partition_name&gt;</span>
+
+<span class="tok-comment"># Node-level details</span>
+<span class="tok-cmd">scontrol</span> show node <span class="tok-value">&lt;node_name&gt;</span></pre></div>
+    </div>
+
+    <!-- ── 4 ── -->
+    <div class="section" id="s4">
+      <div class="section-header">
+        <span class="section-num">04</span>
+        <h2>Job Submission &amp; Testing</h2>
+      </div>
+      <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="code-copy" onclick="copyCode(this)">copy</button></div><pre><span class="tok-comment"># Submit a job</span>
+<span class="tok-cmd">sbatch</span> job_script.sh
+
+<span class="tok-comment"># Run an interactive job</span>
+<span class="tok-cmd">srun</span> <span class="tok-flag">--pty</span> bash
+
+<span class="tok-comment"># Test job without submitting (dry run)</span>
+<span class="tok-cmd">sbatch</span> <span class="tok-flag">--test-only</span> job_script.sh</pre></div>
+      <div class="callout info">
+        <span class="callout-icon">ℹ</span>
+        <div>To check the estimated start time, use <code>--test-only</code> or the <code>checktime</code> command (uses <code>check-time.sh</code>).</div>
+      </div>
+    </div>
+
+    <!-- ── 5 ── -->
+    <div class="section" id="s5">
+      <div class="section-header">
+        <span class="section-num">05</span>
+        <h2>Resources</h2>
+      </div>
+      <p>Request GPUs on compute nodes:</p>
+      <div class="code-block"><div class="code-header"><span class="code-lang">bash — sbatch directives</span><button class="code-copy" onclick="copyCode(this)">copy</button></div><pre><span class="tok-sbatch">#SBATCH</span> <span class="tok-flag">--gres</span>=<span class="tok-value">gpu:1</span>   <span class="tok-comment"># 1 GPU</span>
+<span class="tok-sbatch">#SBATCH</span> <span class="tok-flag">--gres</span>=<span class="tok-value">gpu:2</span>   <span class="tok-comment"># 2 GPUs</span>
+
+<span class="tok-sbatch">#SBATCH</span> <span class="tok-flag">--mem</span>=<span class="tok-value">[MB]</span>          <span class="tok-comment"># Total memory per node</span>
+<span class="tok-sbatch">#SBATCH</span> <span class="tok-flag">--mem-per-cpu</span>=<span class="tok-value">[MB]</span>  <span class="tok-comment"># Memory per CPU core</span></pre></div>
+
+      <div class="callout warn">
+        <span class="callout-icon">⚠</span>
+        <div>
+          <strong>Resource Guidelines</strong><br/>
+          CPUs in GPU env: use <code>8</code> as a safe choice.<br/>
+          RAM: always allocate at least as much RAM as total GPU memory.<br/>
+          Example: 2× A100 (80 GB each) → use <code>--mem=160000</code>.
+        </div>
+      </div>
+
+      <div class="resource-grid">
+        <div class="resource-card">
+          <div class="resource-card-label">Safe CPU Count</div>
+          <div class="resource-card-value">8 CPUs</div>
+        </div>
+        <div class="resource-card">
+          <div class="resource-card-label">2× A100 RAM</div>
+          <div class="resource-card-value">160 GB (160000 MB)</div>
+        </div>
+        <div class="resource-card">
+          <div class="resource-card-label">GPU Memory (A100)</div>
+          <div class="resource-card-value">80 GB per card</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 6 ── -->
+    <div class="section" id="s6">
+      <div class="section-header">
+        <span class="section-num">06</span>
+        <h2>Job Monitoring &amp; Queue Utilities</h2>
+      </div>
+      <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="code-copy" onclick="copyCode(this)">copy</button></div><pre><span class="tok-comment"># View all jobs in queue</span>
+<span class="tok-cmd">squeue</span>
+
+<span class="tok-comment"># View only your jobs</span>
+<span class="tok-cmd">squeue</span> <span class="tok-flag">--me</span>
+
+<span class="tok-comment"># Custom formatted view</span>
+<span class="tok-cmd">squeue</span> <span class="tok-flag">-o</span> <span class="tok-value">"%.18i %.9P %.8j %.8u %.2t %.10M %.6D %R"</span>
+
+<span class="tok-comment"># View completed jobs</span>
+<span class="tok-cmd">sacct</span>
+
+<span class="tok-comment"># Detailed job accounting</span>
+<span class="tok-cmd">sacct</span> <span class="tok-flag">-j</span> <span class="tok-value">&lt;jobid&gt;</span> <span class="tok-flag">--format</span>=JobID,JobName,Partition,AllocCPUS,State,Elapsed</pre></div>
+    </div>
+
+    <!-- ── 7 ── -->
+    <div class="section" id="s7">
+      <div class="section-header">
+        <span class="section-num">07</span>
+        <h2>Viewing &amp; Modifying Job Details</h2>
+      </div>
+      <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="code-copy" onclick="copyCode(this)">copy</button></div><pre><span class="tok-comment"># View details of a specific job</span>
+<span class="tok-cmd">scontrol</span> show job <span class="tok-value">&lt;jobid&gt;</span>
+
+<span class="tok-comment"># Update the time limit</span>
+<span class="tok-cmd">scontrol</span> update jobid=<span class="tok-value">106</span> TimeLimit=<span class="tok-value">4-00:00:00</span></pre></div>
+    </div>
+
+    <!-- ── 8 ── -->
+    <div class="section" id="s8">
+      <div class="section-header">
+        <span class="section-num">08</span>
+        <h2>Checking GPU Usage</h2>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Check your Job ID</strong>
+            <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="code-copy" onclick="copyCode(this)">copy</button></div><pre><span class="tok-cmd">squeue</span> <span class="tok-flag">--me</span></pre></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Run nvidia-smi within your allocated job</strong>
+            <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="code-copy" onclick="copyCode(this)">copy</button></div><pre><span class="tok-cmd">srun</span> <span class="tok-flag">--jobid</span>=<span class="tok-value">&lt;jobid&gt;</span> nvidia-smi</pre></div>
+            <div class="callout info" style="margin-top:0.5rem">
+              <span class="callout-icon">ℹ</span>
+              <div>The <code>--jobid</code> flag attaches <code>srun</code> to an already-allocated job.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 9 ── -->
+    <div class="section" id="s9">
+      <div class="section-header">
+        <span class="section-num">09</span>
+        <h2>Opening a Shell Inside a Worker Node</h2>
+      </div>
+      <p>Open an interactive bash shell inside the allocated worker node:</p>
+      <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="code-copy" onclick="copyCode(this)">copy</button></div><pre><span class="tok-cmd">srun</span> <span class="tok-flag">--jobid</span>=<span class="tok-value">&lt;jobid&gt;</span> <span class="tok-flag">--pty -i</span> bash</pre></div>
+      <p>This lets you inspect the node environment, check GPU state, validate paths, and debug issues directly.</p>
+    </div>
+
+    <!-- ── 10 ── -->
+    <div class="section" id="s10">
+      <div class="section-header">
+        <span class="section-num">10</span>
+        <h2>Cancel / Modify Jobs</h2>
+      </div>
+      <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="code-copy" onclick="copyCode(this)">copy</button></div><pre><span class="tok-comment"># Cancel a specific job</span>
+<span class="tok-cmd">scancel</span> <span class="tok-value">&lt;jobid&gt;</span>
+
+<span class="tok-comment"># Cancel all your jobs</span>
+<span class="tok-cmd">scancel</span> <span class="tok-flag">-u</span> <span class="tok-env">$USER</span>
+
+<span class="tok-comment"># Hold a job (prevent it from starting)</span>
+<span class="tok-cmd">scontrol</span> hold <span class="tok-value">&lt;jobid&gt;</span>
+
+<span class="tok-comment"># Release a held job</span>
+<span class="tok-cmd">scontrol</span> release <span class="tok-value">&lt;jobid&gt;</span></pre></div>
+    </div>
+
+    <!-- ── 11 ── -->
+    <div class="section" id="s11">
+      <div class="section-header">
+        <span class="section-num">11</span>
+        <h2>Debugging &amp; Logs</h2>
+      </div>
+      <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="code-copy" onclick="copyCode(this)">copy</button></div><pre><span class="tok-comment"># Check the default job output file</span>
+<span class="tok-cmd">cat</span> slurm-<span class="tok-value">&lt;jobid&gt;</span>.out
+
+<span class="tok-comment"># Follow logs live</span>
+<span class="tok-cmd">tail</span> <span class="tok-flag">-f</span> slurm-<span class="tok-value">&lt;jobid&gt;</span>.out
+
+<span class="tok-comment"># Check node allocation and job errors</span>
+<span class="tok-cmd">scontrol</span> show job <span class="tok-value">&lt;jobid&gt;</span></pre></div>
+    </div>
+
+    <!-- ── 12 ── -->
+    <div class="section" id="s12">
+      <div class="section-header">
+        <span class="section-num">12</span>
+        <h2>Useful Tips &amp; Common Pitfalls</h2>
+      </div>
+
+      <p>Check pending reason for a job in <strong>PD</strong> state:</p>
+      <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="code-copy" onclick="copyCode(this)">copy</button></div><pre><span class="tok-cmd">squeue</span> <span class="tok-flag">-j</span> <span class="tok-value">&lt;jobid&gt;</span> <span class="tok-flag">-o</span> <span class="tok-value">"%i %t %r"</span></pre></div>
+
+      <h3>Common Pending Reasons</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Reason</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>Resources</td><td>Requested resources not yet available</td></tr>
+            <tr><td>PartitionTimeLimit</td><td>Requested time exceeds partition's maximum</td></tr>
+            <tr><td>Priority</td><td>Other jobs have higher priority</td></tr>
+            <tr><td>QOSMaxGRESPerUser</td><td>GPU limit per user reached</td></tr>
+            <tr><td>NodeDown</td><td>Allocated node is unavailable/down</td></tr>
+            <tr><td>ReqNodeNotAvail</td><td>Specific requested node is unavailable</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Other Common Pitfalls</h3>
+      <ul class="bullets">
+        <li><strong>Don't over-request memory</strong> — jobs may be rejected or delayed if memory exceeds node capacity.</li>
+        <li><strong>Avoid long <code>--time</code> values</strong> — unnecessarily high time limits reduce scheduling priority.</li>
+        <li><strong>Module env mismatch</strong> — ensure all required modules (<code>module load</code>) are loaded inside your job script, not just in your interactive shell.</li>
+        <li><strong>Path issues</strong> — always use absolute paths in job scripts.</li>
+        <li><strong>Job array pitfalls</strong> — use <code>%A</code> (array job ID) and <code>%a</code> (task index) in output filenames.</li>
+        <li><strong>NCCL errors in multi-GPU jobs</strong> — usually caused by incorrect <code>--ntasks-per-node</code> settings. See §13.</li>
+      </ul>
+    </div>
+
+    <!-- ── 13 ── -->
+    <div class="section" id="s13">
+      <div class="section-header">
+        <span class="section-num">13</span>
+        <h2>Training</h2>
+      </div>
+
+      <h3>Single Node Training</h3>
+      <p>For initial experimentation and debugging, run training <strong>manually inside a single SLURM task</strong>.</p>
+      <div class="code-block"><div class="code-header"><span class="code-lang">bash — job script</span><button class="code-copy" onclick="copyCode(this)">copy</button></div><pre><span class="tok-sbatch">#SBATCH</span> <span class="tok-flag">-N</span> <span class="tok-value">1</span>
+<span class="tok-sbatch">#SBATCH</span> <span class="tok-flag">--ntasks-per-node</span>=<span class="tok-value">1</span>
+<span class="tok-sbatch">#SBATCH</span> <span class="tok-flag">--gres</span>=<span class="tok-value">gpu:2</span></pre></div>
+
+      <div class="callout warn">
+        <span class="callout-icon">⚠</span>
+        <div>Setting <code>--ntasks-per-node=2</code> without proper distributed setup (<code>srun</code> / DDP) leads to duplicate training processes, GPU contention, and NCCL crashes. Keep it at <code>1</code> and let your script handle process spawning.</div>
+      </div>
+
+      <div class="mental-model">
+        <div class="label">Key Principle</div>
+        There are <strong style="color:#fff">two independent ways</strong> processes can be created:<br/>
+        &nbsp;&nbsp;<span style="color:var(--cyan)">1.</span> SLURM via <code>--ntasks-per-node</code><br/>
+        &nbsp;&nbsp;<span style="color:var(--cyan)">2.</span> Your training script via manual spawning or framework internals<br/>
+        <br/>
+        → Use <strong style="color:var(--green)">only ONE</strong> of these at a time.
+      </div>
+
+      <h3>Multi-Node Training</h3>
+      <div class="code-block"><div class="code-header"><span class="code-lang">bash — multi-node job script</span><button class="code-copy" onclick="copyCode(this)">copy</button></div><pre><span class="tok-sbatch">#SBATCH</span> <span class="tok-flag">-N</span> <span class="tok-value">2</span>                        <span class="tok-comment"># 2 nodes</span>
+<span class="tok-sbatch">#SBATCH</span> <span class="tok-flag">--ntasks-per-node</span>=<span class="tok-value">2</span>         <span class="tok-comment"># 2 processes per node (1 per GPU)</span>
+<span class="tok-sbatch">#SBATCH</span> <span class="tok-flag">--gres</span>=<span class="tok-value">gpu:2</span>                <span class="tok-comment"># 2 GPUs per node</span>
+<span class="tok-sbatch">#SBATCH</span> <span class="tok-flag">--cpus-per-task</span>=<span class="tok-value">8</span>
+<span class="tok-sbatch">#SBATCH</span> <span class="tok-flag">--mem</span>=<span class="tok-value">0</span>
+
+<span class="tok-comment"># ---- Distributed Setup ----</span>
+<span class="tok-export">export</span> <span class="tok-env">MASTER_ADDR</span>=$(scontrol show hostnames <span class="tok-env">$SLURM_JOB_NODELIST</span> | head -n 1)
+<span class="tok-export">export</span> <span class="tok-env">MASTER_PORT</span>=<span class="tok-value">29500</span>
+<span class="tok-export">export</span> <span class="tok-env">WORLD_SIZE</span>=$((<span class="tok-env">$SLURM_NNODES</span> * <span class="tok-env">$SLURM_NTASKS_PER_NODE</span>))
+
+<span class="tok-comment"># ---- Launch ----</span>
+<span class="tok-cmd">srun</span> onmt_train <span class="tok-flag">-config</span> yamls/a40.train.multilingual.en-xx-en.yaml</pre></div>
+
+      <div class="callout danger">
+        <span class="callout-icon">✕</span>
+        <div>Do <strong>NOT</strong> manually set <code>CUDA_VISIBLE_DEVICES</code> in multi-node jobs — SLURM assigns GPUs per process automatically. Do <strong>NOT</strong> mix <code>srun torchrun ...</code> — this causes duplicate processes and NCCL hangs.</div>
+      </div>
+
+      <h3>Mental Model</h3>
+      <div class="mental-model">
+        <div class="label">Topology</div>
+        Single-node:&nbsp; 1 machine → multiple GPUs → <span style="color:var(--green)">shared memory</span><br/><br/>
+        Multi-node:&nbsp;&nbsp; Node 0 &lt;──network──&gt; Node 1<br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--cyan)">GPU  GPU</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--cyan)">GPU  GPU</span><br/><br/>
+        Bottleneck shifts from <span style="color:var(--yellow)">compute → network (NCCL)</span>
+      </div>
+
+      <h3>srun vs torchrun</h3>
+      <div class="table-wrap">
+        <table class="compare-table">
+          <thead><tr><th>Feature</th><th>torchrun</th><th>srun</th></tr></thead>
+          <tbody>
+            <tr><td>Cluster-aware</td><td><span class="icon-no">✗</span></td><td><span class="icon-yes">✓</span></td></tr>
+            <tr><td>Multi-node via scheduler</td><td><span class="icon-no">✗</span> manual</td><td><span class="icon-yes">✓</span></td></tr>
+            <tr><td>Resource allocation</td><td><span class="icon-no">✗</span></td><td><span class="icon-yes">✓</span></td></tr>
+            <tr><td>Recommended on SLURM</td><td><span class="icon-warn">⚠</span></td><td><span class="icon-yes">✓</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>DDP Environment Variables Set by Launchers</h4>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Variable</th><th>Example</th></tr></thead>
+          <tbody>
+            <tr><td>RANK</td><td>0, 1, 2, 3</td></tr>
+            <tr><td>LOCAL_RANK</td><td>GPU id on node</td></tr>
+            <tr><td>WORLD_SIZE</td><td>Total number of processes</td></tr>
+            <tr><td>MASTER_ADDR</td><td>Node 0 hostname</td></tr>
+            <tr><td>MASTER_PORT</td><td>Communication port</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Final Checklist (Before Multi-Node Jobs)</h3>
+      <ul class="checklist">
+        <li>Nodes can communicate (test with <code>ping</code>)</li>
+        <li>Same software environment on all nodes (modules, conda envs)</li>
+        <li>Shared filesystem accessible from all nodes (data &amp; checkpoints)</li>
+        <li><code>CUDA_VISIBLE_DEVICES</code> is <strong>not</strong> manually set</li>
+        <li>Training launched using <code>srun</code></li>
+        <li><code>MASTER_ADDR</code> and <code>MASTER_PORT</code> are exported correctly</li>
+      </ul>
+    </div>
+
+    <!-- ── 14 ── -->
+    <div class="section" id="s14">
+      <div class="section-header">
+        <span class="section-num">14</span>
+        <h2>Prajna Server Configuration</h2>
+      </div>
+      <div class="callout info">
+        <span class="callout-icon">ℹ</span>
+        <div>Rules and settings <strong>specific to the Prajna cluster</strong>. May not apply to other SLURM-managed servers.</div>
+      </div>
+
+      <h3>Partition &amp; QoS Must Match</h3>
+      <p>On Prajna, <code>--partition</code> and <code>--qos</code> values <strong>must be identical</strong>. Mismatching causes a QoS error.</p>
+      <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="code-copy" onclick="copyCode(this)">copy</button></div><pre><span class="tok-sbatch">#SBATCH</span> <span class="tok-flag">--partition</span>=<span class="tok-value">a40</span>
+<span class="tok-sbatch">#SBATCH</span> <span class="tok-flag">--qos</span>=<span class="tok-value">a40</span></pre></div>
+
+      <h3>GPU Must Be Explicitly Requested</h3>
+      <p>Even after specifying a GPU partition, you must also set <code>--gres=gpu:&lt;n&gt;</code>. Without it, no GPUs will be visible.</p>
+      <div class="code-block"><div class="code-header"><span class="code-lang">bash — 4 GPUs on dgx partition</span><button class="code-copy" onclick="copyCode(this)">copy</button></div><pre><span class="tok-sbatch">#SBATCH</span> <span class="tok-flag">--partition</span>=<span class="tok-value">dgx</span>
+<span class="tok-sbatch">#SBATCH</span> <span class="tok-flag">--qos</span>=<span class="tok-value">dgx</span>
+<span class="tok-sbatch">#SBATCH</span> <span class="tok-flag">--gres</span>=<span class="tok-value">gpu:4</span></pre></div>
+
+      <div class="callout warn">
+        <span class="callout-icon">⚠</span>
+        <div>
+          <strong>Common Prajna Pitfalls</strong><br/>
+          QoS mismatch (e.g. <code>--partition=a40</code> with <code>--qos=dgx</code>) → job rejected immediately.<br/>
+          Missing <code>--gres</code> → job runs but sees 0 GPUs; CUDA fails silently with <em>no device found</em>.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 15 ── -->
+    <div class="section" id="s15">
+      <div class="section-header">
+        <span class="section-num">15</span>
+        <h2>Environment Setup: Spack &amp; Conda</h2>
+      </div>
+      <div class="callout info">
+        <span class="callout-icon">ℹ</span>
+        <div>Specific to the <strong>Prajna server</strong> environment. System CUDA version: <strong>12.4</strong>.</div>
+      </div>
+
+      <h3>Session Setup Checklist</h3>
+      <p>Run these in order at the start of every new terminal session on Prajna:</p>
+      <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="code-copy" onclick="copyCode(this)">copy</button></div><pre><span class="tok-comment"># 1. Load Spack (use main path — NOT the outdated /scratch path)</span>
+<span class="tok-cmd">source</span> /lustre-flash/apps/spack/share/spack/setup-env.sh
+
+<span class="tok-comment"># 2. Load Miniconda via Spack</span>
+<span class="tok-cmd">spack</span> load miniconda3
+
+<span class="tok-comment"># 3. Activate your conda environment</span>
+<span class="tok-cmd">conda</span> activate <span class="tok-value">&lt;your_env&gt;</span></pre></div>
+
+      <div class="callout danger">
+        <span class="callout-icon">✕</span>
+        <div>Do <strong>NOT</strong> use the outdated path:<br/><code>/scratch/apps/spack/share/spack/setup-env.sh</code></div>
+      </div>
+
+      <h3>Fixing Spack Errors</h3>
+      <p>If you encounter broken package repo or stale cache issues:</p>
+      <div class="code-block"><div class="code-header"><span class="code-lang">bash</span><button class="code-copy" onclick="copyCode(this)">copy</button></div><pre><span class="tok-cmd">rm</span> <span class="tok-flag">-rf</span> ~/.spack/package_repos       <span class="tok-comment"># Remove broken local repo cache</span>
+<span class="tok-cmd">spack</span> clean <span class="tok-flag">-a</span>                      <span class="tok-comment"># Clean all cached/built data</span>
+<span class="tok-cmd">source</span> /lustre-flash/apps/spack/share/spack/setup-env.sh
+<span class="tok-cmd">spack</span> load miniconda3</pre></div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+<script>
+  // ── Copy button ──────────────────────────────────────
+  function copyCode(btn) {
+    const pre = btn.closest('.code-block').querySelector('pre');
+    navigator.clipboard.writeText(pre.innerText).then(() => {
+      btn.textContent = 'copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 1800);
+    });
+  }
+
+  // ── Active nav highlight on scroll ──────────────────
+  const sections = document.querySelectorAll('.section[id]');
+  const navLinks  = document.querySelectorAll('#sidebar-nav a');
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const active = document.querySelector(`#sidebar-nav a[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
