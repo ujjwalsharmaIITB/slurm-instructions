@@ -16,7 +16,9 @@
 10. [Cancel / Modify Jobs](#10-cancel--modify-jobs)
 11. [Debugging & Logs](#11-debugging--logs)
 12. [Useful Tips & Common Pitfalls](#12-useful-tips--common-pitfalls)
-13. [Training](#13-training)
+13. [Training](#13-training) _(includes `srun` vs `torchrun` explanation)_
+14. [Prajna Server Configuration](#14-prajna-server-configuration)
+15. [Environment Setup: Spack & Conda](#15-environment-setup-spack--conda)
 
 ---
 
@@ -123,7 +125,6 @@ Always check the resources used (from another server), as insufficient resources
 - **Number of CPUs in GPU environment** — `8` is a safe choice.
 - **RAM (`--mem`)** — Always allocate at least as much RAM as total GPU memory.  
   Example: For 2 × A100 (80 GB each), use `--mem=160000` (160 GB) as a safe value.
-    - `--mem` 0    # Allocate all available memory
 
 ---
 
@@ -435,9 +436,142 @@ Node 0  <---network--->  Node 1
 ```
 Communication is over the network (NCCL backend). The bottleneck shifts from **compute → network communication**.
 
+---
 
-See [Multinode Training](train-multinode.sh) for reference.
+---
 
+### Why Use `srun`? (`srun` vs `torchrun`)
+
+This gets to the core of how distributed training is actually launched — many subtle bugs come from misunderstanding this.
+
+#### The Core Idea
+
+When you do distributed training (DDP), you don't run one process. You run **N processes = number of GPUs** (across all nodes). Each process:
+- Controls one GPU
+- Participates in gradient synchronization
+
+#### Without `srun` / `torchrun`
+
+If you simply run:
+```bash
+onmt_train ...
+```
+Only **one process** starts. Even if you have multiple GPUs:
+- No distributed init
+- No NCCL communication
+- No true DDP
+
+#### What `srun` and `torchrun` Actually Do
+
+They are **process launchers**. Their job is to start multiple coordinated processes and set the correct distributed environment variables.
+
+Each process receives:
+
+| Variable | Example |
+|---|---|
+| `RANK` | `0, 1, 2, 3` |
+| `LOCAL_RANK` | GPU id on node |
+| `WORLD_SIZE` | Total number of processes |
+| `MASTER_ADDR` | Node 0 hostname |
+| `MASTER_PORT` | Communication port |
+
+These are required for:
+```python
+torch.distributed.init_process_group(...)
+```
+
+---
+
+#### `torchrun` (PyTorch-native)
+
+```bash
+torchrun --nproc_per_node=2 --nnodes=2 --node_rank=0 train.py
+```
+
+PyTorch handles spawning processes, assigning GPUs, and setting environment variables.
+
+#### `srun` (SLURM-native)
+
+```bash
+srun onmt_train ...
+```
+
+SLURM handles multi-node scheduling, process spawning across nodes, and environment variables (`SLURM_PROCID`, etc.). PyTorch/OpenNMT reads those and maps to DDP.
+
+---
+
+#### Key Differences
+
+| Feature | `torchrun` | `srun` |
+|---|---|---|
+| Cluster-aware | ❌ | ✅ |
+| Multi-node via scheduler | ❌ (manual) | ✅ |
+| Resource allocation | ❌ | ✅ |
+| Recommended on SLURM | ⚠️ | ✅ |
+
+> **Mental model:**
+> - `torchrun` → "Spawn processes yourself"
+> - `srun` → "Let the cluster spawn processes correctly"
+
+---
+
+#### ⚠️ Why Mixing Them Incorrectly Breaks Things
+
+```bash
+# ❌ Bad — double spawning → chaos
+srun torchrun ...
+```
+This causes duplicate processes, wrong ranks, and NCCL hangs.
+
+**Correct patterns:**
+
+```bash
+# ✅ On a SLURM cluster (your case)
+srun onmt_train ...
+
+# ✅ Non-SLURM / local machine
+torchrun ...
+```
+
+---
+
+#### What OpenNMT Expects
+
+OpenNMT internally uses `torch.distributed.init_process_group`, which relies on environment variables being set correctly:
+
+- `srun` → sets them → ✅ works
+- `torchrun` → sets them → ✅ works
+- Plain `python` → ❌ fails or runs single GPU only
+
+---
+
+#### Subtle but Critical Insight
+
+`srun` does **not** implement DDP. `torchrun` does **not** allocate resources. They solve **different layers**:
+
+```
+SLURM (srun)    →  resource + process placement
+PyTorch (DDP)   →  communication + training sync
+```
+
+---
+
+#### When Would You Use `torchrun`?
+
+Only if:
+- Running outside SLURM
+- Debugging locally on a single machine
+- Running on a single node manually (no cluster)
+
+---
+
+#### TL;DR
+
+- Distributed training = **multiple processes**, not multiple GPUs magically
+- `srun` / `torchrun` = process launchers
+  - `srun` → cluster-aware → **use this on SLURM**
+  - `torchrun` → PyTorch-native → use locally / outside SLURM
+- In your case: always use `srun onmt_train ...`
 
 ---
 
@@ -449,3 +583,111 @@ See [Multinode Training](train-multinode.sh) for reference.
 - [ ] `CUDA_VISIBLE_DEVICES` is **not** manually set
 - [ ] Training is launched using `srun`
 - [ ] `MASTER_ADDR` and `MASTER_PORT` are exported correctly
+
+---
+
+## 14. Prajna and Param Rudra Server Configuration
+
+> **Note:** This section contains rules and settings **specific to the Prajna cluster**. These may not apply to other SLURM-managed servers.
+
+### Partition & QoS Must Always Match
+
+On Prajna, the `--partition` and `--qos` values **must be identical**. Mismatching them will cause a **QoS error** and your job will not be submitted.
+
+```bash
+#SBATCH --partition=a40
+#SBATCH --qos=a40
+```
+
+### GPU Must Be Explicitly Requested
+
+Even after specifying a partition, you **must** also set `--gres=gpu:<n>`. Without it, **no GPUs will be visible** to your job, even on a GPU partition.
+
+```bash
+#SBATCH --gres=gpu:2
+```
+
+### Complete Partition Block Example
+
+The following requests 4 GPUs on the `dgx` partition:
+
+```bash
+#SBATCH --partition=dgx
+#SBATCH --qos=dgx
+#SBATCH --gres=gpu:4
+```
+
+### ⚠️ Common Pitfalls on Prajna
+
+- **QoS mismatch** (e.g. `--partition=a40` with `--qos=dgx`) → job rejected immediately with a QoS error.
+- **Missing `--gres`** → job runs but sees 0 GPUs; CUDA will fail silently or throw a `no device found` error.
+- Always double-check that `--partition`, `--qos`, and `--gres` are all consistent before submitting.
+
+---
+
+## 15. Environment Setup: Spack & Conda
+
+> **Note:** This section is specific to the **Prajna server** environment.
+
+### CUDA Version
+
+The system CUDA version on Prajna is **12.4**. Ensure your PyTorch/TensorFlow builds and conda environments are compatible with CUDA 12.4.
+
+---
+
+### Step 1 — Load Spack
+
+Spack is the package manager used on Prajna. Load it into your terminal session using the **main** (up-to-date) path:
+
+```bash
+source /lustre-flash/apps/spack/share/spack/setup-env.sh
+```
+
+> ⚠️ The following path is **outdated** and should not be used:
+> ```bash
+> source /scratch/apps/spack/share/spack/setup-env.sh   # outdated — avoid
+> ```
+
+---
+
+### Step 2 — Load Miniconda via Spack
+
+Miniconda has already been installed via Spack. To make `conda` available in your session, load it:
+
+```bash
+spack load miniconda3
+```
+
+> **Always load Miniconda through Spack**, not directly. This ensures the correct version and environment paths are used.
+
+After this, `conda` will be available and you can activate or create environments as usual.
+
+---
+
+### Fixing Spack Errors
+
+If you encounter broken package repo errors or stale cache issues with Spack, run the following to reset:
+
+```bash
+rm -rf ~/.spack/package_repos       # Remove broken local repo cache
+spack clean -a                      # Clean all cached/built data
+source /lustre-flash/apps/spack/share/spack/setup-env.sh   # Re-source Spack
+spack load miniconda3               # Reload Miniconda
+```
+
+---
+
+### Summary: Session Setup Checklist (Prajna)
+
+Run these in order at the start of every new terminal session on Prajna:
+
+```bash
+# 1. Load Spack
+source /lustre-flash/apps/spack/share/spack/setup-env.sh
+
+# 2. Load Miniconda
+spack load miniconda3
+
+# 3. Activate your conda environment
+conda activate <your_env>
+```
